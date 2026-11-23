@@ -52,13 +52,15 @@ def _data():
 
 @lru_cache(maxsize=1)
 def _saved_models():
-    """Các mô hình đã lưu ở notebook 04b. Trả về {} nếu không nạp được (sẽ huấn luyện lại)."""
-    try:
-        import joblib
-        return dict(joblib.load(ROOT / "crop_models.pkl")["models"])
-    except Exception:
-        return {}
+    import joblib
 
+    path = ROOT / "crop_models.pkl"
+    data = joblib.load(path)
+
+    print("Đã đọc file:", path)
+    print("Các khóa:", list(data["models"].keys()))
+
+    return dict(data["models"])
 
 def _params(features):
     if tuple(features) == SOIL:
@@ -73,7 +75,9 @@ def _model_for(features):
     """features: tuple tên chỉ số theo MODEL_ORDER. Trả về (mô hình, Accuracy trên test.csv, nguồn)."""
     train, test = _data()
     cols = list(features)
-    model, nguon = _saved_models().get(features), "crop_models.pkl"
+    models = _saved_models()
+    model = models.get(features)
+    nguon = "crop_models.pkl"
     if model is None:
         model = MyRandomForest(**_params(features)).fit(train[cols].astype(float), train["Crop"].astype(str))
         nguon = "huấn luyện từ train.csv"
