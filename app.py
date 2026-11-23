@@ -10,14 +10,11 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="collapsed",
 )
-
 ROOT = Path(__file__).resolve().parent
 botaniq_component = components.declare_component(
     "botaniq_html_frontend",
     path=str(ROOT / "botaniq_component" / "frontend"),
 )
-
-# CSS ẩn khung Streamlit, để giao diện Botaniq chiếm toàn trang.
 st.markdown("""<style>
 #MainMenu, footer, header {visibility:hidden; height:0;}
 [data-testid="stAppViewContainer"] {background:#222a10;}
@@ -30,13 +27,11 @@ if "botaniq_result" not in st.session_state:
     st.session_state.botaniq_result = None
 if "botaniq_processed_signature" not in st.session_state:
     st.session_state.botaniq_processed_signature = None
-
 payload = botaniq_component(
     result=st.session_state.botaniq_result,
     height=1250,
     key="botaniq_main_component",
 )
-
 if isinstance(payload, dict) and payload.get("signature"):
     signature = payload["signature"]
     if signature != st.session_state.botaniq_processed_signature:
