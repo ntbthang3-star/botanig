@@ -35,10 +35,20 @@ CROP_UI_NAMES = [
 # Tham số đã chọn ở notebook (dùng khi phải huấn luyện lại).
 PARAMS_RF4 = dict(n_estimators=100, criterion="entropy", max_depth=8, min_samples_split=2,
                   min_samples_leaf=3, max_features=1, vote="soft", random_state=42)
-PARAMS_RF7 = dict(n_estimators=100, criterion="gini", max_depth=None, min_samples_split=2,
-                  min_samples_leaf=1, max_features=3, vote="hard", random_state=42)
+PARAMS_RF7 = dict(n_estimators=100, criterion="entropy", max_depth=None, min_samples_split=2,
+                  min_samples_leaf=3, max_features=1, vote="hard", random_state=42)
 
 N_THU_ON_DINH, MUC_THU_ON_DINH = 20, 0.10
+
+# Kết quả Nested Cross-Validation 5x5 của RF7 lấy từ Notebook.
+# Đơn vị là phần trăm; std là độ lệch chuẩn giữa 5 outer folds.
+NESTED_CV_RF7 = {
+    "method": "Nested Cross-Validation (5 outer folds × 5 inner folds)",
+    "accuracy_mean": 99.4091, "accuracy_std": 0.4129,
+    "precision_macro_mean": 99.4445, "precision_macro_std": 0.3949,
+    "recall_macro_mean": 99.4091, "recall_macro_std": 0.4129,
+    "f1_macro_mean": 99.4082, "f1_macro_std": 0.4134,
+}
 
 
 def _normalize(value):
@@ -89,7 +99,9 @@ def _model_for(features):
 def _train_range():
     train, _ = _data()
     return {c: (float(train[c].min()), float(train[c].max())) for c in UI_FEATURES}
-
+if __name__ == "__main__":
+    print("Miền giá trị trong train.csv:")
+    print(_train_range())    
 
 def du_doan(values, active_indices):
     """values: 7 giá trị theo thứ tự giao diện; active_indices: chỉ số (theo giao diện) được dùng.
@@ -127,7 +139,7 @@ def du_doan(values, active_indices):
     stability = [bool(p == top) for p in model.predict(noisy)]
 
     rng_train = _train_range()
-    return {
+    result = {
         "probabilities": probabilities,
         "accuracy": accuracy,
         "features": list(features),
@@ -139,3 +151,8 @@ def du_doan(values, active_indices):
         "out_of_range": [f for f in features if not rng_train[f][0] <= chosen[f] <= rng_train[f][1]],
         "train_range": {f: list(rng_train[f]) for f in UI_FEATURES},
     }
+    # Nested CV chỉ đánh giá cấu hình đủ 7 đặc trưng RF7.
+    # Với các tổ hợp thiếu chỉ số, giữ Accuracy test riêng của tổ hợp đó.
+    if tuple(features) == tuple(MODEL_ORDER):
+        result["nested_cv"] = dict(NESTED_CV_RF7)
+    return result
