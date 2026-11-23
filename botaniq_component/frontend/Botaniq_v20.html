@@ -1917,33 +1917,7 @@ const ACC={'N+P+K+pH':.79,'humidity+rainfall':.77,'K+humidity+rainfall':.96,'N+K
 const NH={'Lúa nước':'Đay','Đay':'Lúa nước','Đậu đen':'Ngô','Ngô':'Đậu đen','Đậu lăng':'Đậu mốc','Đậu mốc':'Đậu lăng'};
 const LK=[['Bón thêm đạm hoặc phân hữu cơ.','Giảm đạm, trồng xen cây họ đậu.'],['Bổ sung phân lân.','Ngừng bón lân, kiểm tra đất.'],['Bổ sung kali hoặc tro bếp.','Giảm kali, tưới rửa nếu đất mặn.'],['Bón vôi để nâng pH.','Bón lưu huỳnh hoặc chất hữu cơ để hạ pH.'],['Che chắn, chọn vụ ấm hơn.','Che nắng, tưới làm mát, đổi vụ.'],['Phủ gốc, tưới giữ ẩm.','Làm luống cao, thoát nước.'],['Chuẩn bị tưới bổ sung.','Làm rãnh thoát nước, tránh úng.']];
 const lcg=s=>()=>(s=(s*1664525+1013904223)%4294967296)/4294967296;
-let botaniqPythonResult=null,botaniqLastSent='';
-const botaniqSignature=(v,use)=>JSON.stringify({values:v.map(Number),active:[...use].sort((a,b)=>a-b)});
-function botaniqSendToPython(use){
-  const signature=botaniqSignature(soil.v,use);
-  if(signature===botaniqLastSent)return;
-  botaniqLastSent=signature;
-  parent.postMessage({type:'botaniq-input',payload:{signature,values:soil.v.map(Number),active:use}},'*');
-}
-window.addEventListener('message',event=>{
-  const data=event.data||{};
-  if(data.type==='botaniq-python-result'&&data.result){
-    if(data.result.error){
-      botaniqPythonResult=null;
-      const box=$('#res');
-      if(box)box.textContent='Không thể chạy Random Forest: '+data.result.error;
-      return;
-    }
-    botaniqPythonResult=data.result;
-    if(botaniqPythonResult.signature===botaniqSignature(soil.v,ALL.filter(i=>soil.on[i])))tinh();
-  }
-});
-function prob(v,use){
-  if(botaniqPythonResult&&botaniqPythonResult.signature===botaniqSignature(v,use)){
-    return botaniqPythonResult.probabilities.map((p,i)=>[i,p]).sort((a,b)=>b[1]-a[1]);
-  }
-  const d=C.map(c=>{let q=0;use.forEach(i=>{const z=(v[i]-c.c[i])/R[i][5];q+=z*z});return q}),m=Math.min(...d),e=d.map(q=>Math.exp(-(q-m)/1.8)),s=e.reduce((a,b)=>a+b);return e.map((x,i)=>[i,x/s]).sort((a,b)=>b[1]-a[1]);
-}
+function prob(v,use){const d=C.map(c=>{let q=0;use.forEach(i=>{const z=(v[i]-c.c[i])/R[i][5];q+=z*z});return q}),m=Math.min(...d),e=d.map(q=>Math.exp(-(q-m)/1.8)),s=e.reduce((a,b)=>a+b);return e.map((x,i)=>[i,x/s]).sort((a,b)=>b[1]-a[1])}
 const ALL=[0,1,2,3,4,5,6];
 const mkPlots=()=>{const r=lcg(11),P={0:[0,40],4:[1,72],8:[9,96]};return [0,10,16,11,1,13,21,18,9].map((b,n)=>({c:P[n]?P[n][0]:-1,g:P[n]?P[n][1]:0,care:[0,0,0],cn:P[n]?3:0,pd:P[n]?-Math.round(C[P[n][0]].d*P[n][1]/100):0,v:C[b].c.map((x,i)=>i===3?+(x*(.94+.12*r())).toFixed(1):Math.round(x*(.92+.16*r())))}))};
 let G=store.get('dc3',null)||{coins:250,xp:0,day:0,kg:0,plots:mkPlots()},plots=G.plots,sel=4,seedSel=0,cur=0,grp='Tất cả',q='',noise=0;
@@ -2042,11 +2016,10 @@ function tinh(){
   const sm=[1,1,1,1,0,0,0].every((x,i)=>x===soil.on[i]),al=soil.on.every(x=>x);
   $$('input[name=mode]').forEach(r=>r.checked=r.value==='all'?al:r.value==='soil'?sm:false);
   const res=$('#res'),gb=$('#gyb');
-  if(use.length<2){res.innerHTML='<div class="note w" style="margin:0">Hãy chọn ít nhất 2 chỉ số để mô hình Random Forest có đủ dữ liệu dự đoán.</div>';gb.hidden=true;$('#adjust').hidden=true;return}
-  botaniqSendToPython(use);
+  if(use.length<2){res.innerHTML='<div class="note w" style="margin:0">Hãy chọn ít nhất 2 chỉ số. Một chỉ số đơn lẻ cho kết quả rất kém.</div>';gb.hidden=true;$('#adjust').hidden=true;return}
   gb.hidden=false;
   const top=prob(soil.v,use).slice(0,5),t0=top[0][0],n0=C[t0].n,p0=top[0][1];
-  const a=(botaniqPythonResult&&botaniqPythonResult.signature===botaniqSignature(soil.v,use)?botaniqPythonResult.accuracy:undefined)??ACC[[0,1,2,4,5,3,6].filter(i=>use.includes(i)).map(i=>EN[i]).join('+')],th=CH.find(i=>!soil.on[i]),nh=NH[n0];
+  const a=ACC[[0,1,2,4,5,3,6].filter(i=>use.includes(i)).map(i=>EN[i]).join('+')],th=CH.find(i=>!soil.on[i]),nh=NH[n0];
   const r=lcg(7);let giu=0;const fl=[];for(let k=0;k<20;k++){const w=soil.v.map(x=>x*(.9+.2*r())),ok=prob(w,use)[0][0]===t0;giu+=ok;fl.push(ok)}
   const ms=[];if(use.length<7)ms.push(`Bạn nhập ${use.length}/7 chỉ số nên mô hình kém chắc hơn.`);if(p0<.5)ms.push('Mô hình chưa chắc, hãy xem cả ba gợi ý đầu.');
   const lv=p0>=.8?['cao','hi']:p0>=.5?['trung bình','']:['thấp','lo'];
@@ -2054,8 +2027,8 @@ function tinh(){
   `<div class="card rc">${cimg(t0,'bigp')}<div class="rc-b"><span class="eyebrow" style="margin:0">GỢI Ý SỐ 1</span><h2>${n0}</h2><span class="en">${ENM[t0]}</span><span class="conf ${lv[1]}">${Math.round(p0*100)}% · Độ tin cậy ${lv[0]}</span><div class="top-reason"><b>Vì sao đề xuất ${n0}?</b><p>${(()=>{const near=use.map(i=>{const lo=Math.max(R[i][2],C[t0].c[i]-R[i][5]/2),hi=Math.min(R[i][3],C[t0].c[i]+R[i][5]/2),x=soil.v[i];return {i,ok:x>=lo&&x<=hi,delta:x<lo?lo-x:x>hi?x-hi:0}});const matched=near.filter(x=>x.ok).length;const best=near.filter(x=>!x.ok).sort((a,b)=>a.delta-b.delta).slice(0,2);return `Trong ${use.length} chỉ số bạn cung cấp, ${matched} chỉ số nằm trong khoảng tham khảo của cây. ${best.length?`Các chỉ số gần khoảng phù hợp nhất là ${best.map(x=>SH[x.i]).join(' và ')}.`:'Các chỉ số đã nhập đều nằm trong khoảng tham khảo.'} Mô hình xếp cây này ở vị trí đầu vì dữ liệu đầu vào có mức tương đồng cao nhất trong bộ dữ liệu.`})()}</p></div><div class="acts"><button class="btn" data-a="view" data-v="${t0}">Xem cách trồng ${n0}</button></div></div></div>
   <div class="r23">${[1,2].map(k=>`<div class="card rs">${cimg(top[k][0],'sm')}<small>HẠNG ${k+1}</small><b>${C[top[k][0]].n}</b><span class="pc">${Math.round(top[k][1]*100)}%</span><button class="btn sm ghost" data-a="view" data-v="${top[k][0]}">Xem cách trồng</button></div>`).join('')}</div>
   <div class="card"><h3>Đánh giá mô hình và độ ổn định</h3>
-  <div class="model-viz"><div class="donut-wrap"><div class="donut" style="--value:${Math.round(p0*100)}"><span>${Math.round(p0*100)}<small>%</small></span></div><b>Điểm gợi ý số 1</b><small>Tỷ lệ phiếu dự đoán từ mô hình</small></div>
-  <div class="metric-copy"><b>${a?`Độ chính xác kiểm thử: ${Math.round(a*100)}%`:'Chưa có chỉ số kiểm thử riêng cho tổ hợp này'}</b><p>${a?'Độ chính xác đo trên tập test.csv với đúng nhóm chỉ số đang chọn. Tỷ lệ phiếu không phải xác suất cây chắc chắn sinh trưởng thành công ngoài thực tế.':'Tham khảo kết quả theo số lượng chỉ số đầu vào; không xem đây là xác suất thành công ngoài thực tế.'}</p>
+  <div class="model-viz"><div class="donut-wrap"><div class="donut" style="--value:${Math.round(p0*100)}"><span>${Math.round(p0*100)}<small>%</small></span></div><b>Điểm gợi ý số 1</b><small>Xác suất mô hình</small></div>
+  <div class="metric-copy"><b>${a?`Độ chính xác kiểm thử: ${Math.round(a*100)}%`:'Chưa có chỉ số kiểm thử riêng cho tổ hợp này'}</b><p>${a?'Tỷ lệ đo trên tập dữ liệu thử của mô hình.':'Tham khảo kết quả theo số lượng chỉ số đầu vào; không xem đây là xác suất thành công ngoài thực tế.'}</p>
   <div class="note">${th!==undefined?`<b>Nên đo thêm: ${VN[th]}.</b>`:'<b>Bạn đã nhập đủ cả 7 chỉ số.</b>'}${nh?` <b>${n0}</b> hay bị nhầm với <b>${nh}</b>, hãy xem cả hai.`:''}</div></div></div>
   <div class="line-viz"><b>Độ ổn định khi số đo thay đổi ±10%</b><svg viewBox="0 0 600 112" role="img" aria-label="Biểu đồ đường thể hiện 20 lần thử độ ổn định"><line x1="10" y1="84" x2="590" y2="84" stroke="currentColor" opacity=".2"/><line x1="10" y1="18" x2="10" y2="84" stroke="currentColor" opacity=".2"/><polyline fill="none" stroke="#9ca96a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" points="${fl.map((f,i)=>`${10+i*30.5},${f?24:78}`).join(' ')}"/>${fl.map((f,i)=>`<circle cx="${10+i*30.5}" cy="${f?24:78}" r="3.5" fill="${f?'#9ca96a':'#d84955'}"/>`).join('')}</svg><small>Gợi ý số 1 giữ nguyên ${giu}/20 lần thử · Mỗi điểm là một lần thay đổi ngẫu nhiên trong phạm vi ±10%.</small></div>
   ${ms.length?`<div class="note w">${ms.join(' ')}</div>`:''}</div>`;
